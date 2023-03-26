@@ -43,5 +43,17 @@ I attached the sample test step that I showed during the lesson to help you with
 WARNING: the sample test is neither exhaustive, nor entirely correct. 
 It will require improvements to be a good test suite (for example, covering all pages and taking additional corner cases into consideration, or cleaning the output).
 
-## What I have done
+## Particular Stuff
 
+### Verbosity Level
+0 doesn't print anything, 1 prints only failure (default), 2 prints all
+**TODO** set as parameter
+
+### RM Permission Flag
+if I don't have permission to rm a file the program relies on random named files
+Default behaviour is having permissions.
+**TODO** set as parameter
+
+## Questions
+- from browser Logical And test doesn't work, it works only from script (which is fine)
+    - inj payload is 1.1.1.1&&whoami

@@ -8,7 +8,6 @@ import random
 import os
 from pathlib import Path
 
-
 # 0 doesn't print anything, 1 prints only failure, 2 prints all
 VERBOSITY = 1
 
