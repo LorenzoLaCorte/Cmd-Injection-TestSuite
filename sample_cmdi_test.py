@@ -31,11 +31,10 @@ cmd_inj_payloads = {
 }
 
 arg_inj_payloads = {
-        'whoami': 'pippo -exec whoami ;',
-        'whoami_escaped': 'pippo%20-exec%20whoami\%20\%3B'
+        'exec flag': 'find-escapeshellcmd.php -exec whoami ;'
 }
 
-def testStep(target, vuln_param, test_name, test_value, withHost=False, isBlind=False):
+def testStep(attack, target, vuln_param, test_name, test_value, withHost=False, isBlind=False):
     rand_num = random.randrange(MAX_RAND) 
     cookies = { }
     headers = { }
@@ -61,8 +60,8 @@ def testStep(target, vuln_param, test_name, test_value, withHost=False, isBlind=
 
     test_result = not WHOAMI_ORACLE in response.text
 
-    if VERBOSITY == 1 and not test_result: print(f"\u274c {test_name}")
-    elif VERBOSITY == 2: print("{} {}".format("\u2705" if test_result else "\u274c", test_name))
+    if VERBOSITY == 1 and not test_result: print(f"\u274c {attack}: {test_name}")
+    elif VERBOSITY == 2: print("{} {}: {}".format("\u2705" if test_result else "\u274c", attack, test_name))
     return test_result
 
 
@@ -79,18 +78,23 @@ def testSuite(targets):
             
             # --- Command Injection --- #
             vuln_param = 'host'
+            attack = "Command Injection"
             for test_name, test_value in cmd_inj_payloads.items():
                 for withHost in [False, True]:
                     for isBlind in [False, True]:
                         test_name_opt = test_name + (', with host' if withHost else '') + (', blind' if isBlind else '')
-                        testPassed = testStep(target, vuln_param, test_name_opt, test_value, withHost=withHost, isBlind=isBlind)
-                        results[("Command Injection", test_name_opt)] = testPassed
+                        testPassed = testStep(attack, target, vuln_param, test_name_opt, test_value, withHost=withHost, isBlind=isBlind)
+                        results[(attack, test_name_opt)] = testPassed
                         if not testPassed: allPassed = False
 
             # --- Argument Injection --- #
             vuln_param = 'input'
+            attack = "Argument Injection"
             for test_name, test_value in arg_inj_payloads.items():
-                pass
+                testPassed = testStep(attack, target, vuln_param, test_name, test_value)
+                results[(attack, test_name)] = testPassed
+                if not testPassed: allPassed = False
+            
             if allPassed: print(f"\u2705 All tests have passed")
 
 
@@ -106,4 +110,5 @@ for subdir in subdirs:
     for file in subdir.iterdir():
         if file.is_file():  targets[subdir.name].append(file.name)
 
+# targets = {'cmd-inj':['ping-no-amp.php']}
 testSuite(targets)
