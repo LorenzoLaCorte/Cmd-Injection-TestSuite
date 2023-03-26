@@ -9,6 +9,7 @@ Also, you can use curl converter to convert cURL commands into Python (or any ot
 This is particularly useful if you use the "Copy as cURL" functionality from your browser.
 
 
+## What to do
 You should create a Python script that calls the target application attached to this assignment, and shows a summary of the results. 
 
 For each page of the tested application, you should design and implement a test step (which we will integrate in a larger test suite in the upcoming assignments) that checks:
