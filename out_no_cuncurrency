@@ -1,0 +1,97 @@
+⚙ Lax TestSuite ⚙
+
+Page under test: arg-inj/find-escapeshellcmd.php
+❌ Argument Injection: exec flag
+
+Page under test: cmd-inj/ping.php
+❌ Command Injection: semicolon
+❌ Command Injection: semicolon, blind
+❌ Command Injection: semicolon, with host
+❌ Command Injection: semicolon, with host, blind
+❌ Command Injection: ampersand
+❌ Command Injection: ampersand, blind
+❌ Command Injection: ampersand, with host
+❌ Command Injection: ampersand, with host, blind
+❌ Command Injection: logical AND, with host
+❌ Command Injection: logical AND, with host, blind
+❌ Command Injection: pipe
+❌ Command Injection: pipe, blind
+❌ Command Injection: pipe, with host
+❌ Command Injection: pipe, with host, blind
+❌ Command Injection: logical OR
+❌ Command Injection: logical OR, blind
+
+Page under test: cmd-inj/ping-no-amp.php
+❌ Command Injection: semicolon
+❌ Command Injection: semicolon, blind
+❌ Command Injection: semicolon, with host
+❌ Command Injection: semicolon, with host, blind
+❌ Command Injection: pipe
+❌ Command Injection: pipe, blind
+❌ Command Injection: pipe, with host
+❌ Command Injection: pipe, with host, blind
+❌ Command Injection: logical OR
+❌ Command Injection: logical OR, blind
+
+Page under test: cmd-inj/ping-no-space.php
+❌ Command Injection: semicolon
+❌ Command Injection: semicolon, blind
+❌ Command Injection: semicolon, with host
+❌ Command Injection: semicolon, with host, blind
+❌ Command Injection: ampersand
+❌ Command Injection: ampersand, blind
+❌ Command Injection: ampersand, with host
+❌ Command Injection: ampersand, with host, blind
+❌ Command Injection: logical AND, with host
+❌ Command Injection: logical AND, with host, blind
+❌ Command Injection: pipe
+❌ Command Injection: pipe, blind
+❌ Command Injection: pipe, with host
+❌ Command Injection: pipe, with host, blind
+❌ Command Injection: logical OR
+❌ Command Injection: logical OR, blind
+
+Page under test: cmd-inj/ping-no-semicol.php
+❌ Command Injection: ampersand
+❌ Command Injection: ampersand, blind
+❌ Command Injection: ampersand, with host
+❌ Command Injection: ampersand, with host, blind
+❌ Command Injection: logical AND, with host
+❌ Command Injection: logical AND, with host, blind
+❌ Command Injection: pipe
+❌ Command Injection: pipe, blind
+❌ Command Injection: pipe, with host
+❌ Command Injection: pipe, with host, blind
+❌ Command Injection: logical OR
+❌ Command Injection: logical OR, blind
+
+Page under test: cmd-inj/ping-no-pipe.php
+❌ Command Injection: semicolon
+❌ Command Injection: semicolon, blind
+❌ Command Injection: semicolon, with host
+❌ Command Injection: semicolon, with host, blind
+❌ Command Injection: ampersand
+❌ Command Injection: ampersand, blind
+❌ Command Injection: ampersand, with host
+❌ Command Injection: ampersand, with host, blind
+❌ Command Injection: logical AND, with host
+❌ Command Injection: logical AND, with host, blind
+
+Page under test: blind-cmd-inj/ping-no-output.php
+❌ Command Injection: semicolon, blind
+❌ Command Injection: semicolon, with host, blind
+❌ Command Injection: ampersand, blind
+❌ Command Injection: ampersand, with host, blind
+❌ Command Injection: logical AND, with host, blind
+❌ Command Injection: pipe, blind
+❌ Command Injection: pipe, with host, blind
+❌ Command Injection: logical OR, blind
+
+Page under test: not-vuln/echo.php
+✅ All tests have passed
+
+Page under test: not-vuln/echo-name.php
+✅ All tests have passed
+
+Page under test: not-vuln/ping-escapeshellcmd.php
+✅ All tests have passed
