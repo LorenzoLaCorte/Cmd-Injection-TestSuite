@@ -54,6 +54,7 @@ if I don't have permission to rm a file the program relies on random named files
 Default behaviour is having permissions.
 **TODO** set as parameter
 
-## Questions
-- from browser Logical And test doesn't work, it works only from script (which is fine)
-    - inj payload is 1.1.1.1&&whoami
+
+# How to Use
+Run the php server (`docker-compose up`)
+Run the script (`python3 laxTestSuite.py`)

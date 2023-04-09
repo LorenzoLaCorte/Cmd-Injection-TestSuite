@@ -4,12 +4,12 @@
 # Author: Lorenzo La Corte
 
 from argparse import ArgumentParser, BooleanOptionalAction, Namespace
+import multiprocessing
 import subprocess
 import requests
 import random
 import os
 from pathlib import Path
-import asyncio
 
 MAX_RAND = 10**5
 
@@ -26,7 +26,7 @@ arg_inj_payloads = {
         'exec flag': 'find-escapeshellcmd.php -exec whoami ;'
 }
 
-async def testStep(attack, target, vuln_param, test_name, test_value, args, withHost=False, isBlind=False):
+def testStep(attack, target, vuln_param, test_name, test_value, args, results, withHost=False, isBlind=False):
     rand_num = random.randrange(MAX_RAND) 
     cookies = { }
     headers = { }
@@ -38,7 +38,7 @@ async def testStep(attack, target, vuln_param, test_name, test_value, args, with
         except: pass
         test_value = test_value + f'>../my_blind' if isBlind else test_value
     else:
-        test_value = test_value + f'>../{rand_num}.tmp' if isBlind else test_value
+        test_value = test_value + f'>../{rand_num}' if isBlind else test_value
 
     params = {
         vuln_param: test_value
@@ -50,7 +50,7 @@ async def testStep(attack, target, vuln_param, test_name, test_value, args, with
         raise Exception(f"Error: {response.status_code}")
 
     if isBlind:
-        resource = "my_blind" if args.islocal else f"{rand_num}.tmp"
+        resource = "my_blind" if args.islocal else rand_num
         response = requests.get(f"http://localhost:{args.port}/{resource}")
 
     test_result = not args.oracle in response.text
@@ -58,11 +58,11 @@ async def testStep(attack, target, vuln_param, test_name, test_value, args, with
     if args.verbosity == 1 and not test_result: print(f"\u274c {attack}: {test_name}")
     elif args.verbosity == 2: print("{} {}: {}".format("\u2705" if test_result else "\u274c", attack, test_name))
 
-    return test_result
+    results[(attack, test_name)] = test_result
 
 
 # For each page of the tested application, should design and implement a test step
-async def testSuite(args):
+def testSuite(args):
     print(f"\u2699 Lax TestSuite \u2699")
 
     targets: dict[str, list[str]] = {}
@@ -75,11 +75,13 @@ async def testSuite(args):
         for file in subdir.iterdir():
             if file.is_file():  targets[subdir.name].append(file.name)
 
+    manager = multiprocessing.Manager()
+
     for subdir, files in targets.items(): 
         for file in files:
-            # --- START CONCURRENCY --- #
-            tasks = []
-            loop = asyncio.get_event_loop()
+            # --- START CUNCURRENCY --- #
+            processes: list[multiprocessing.Process] = []
+            results: DictProxy = manager.dict()  # type: ignore
 
             target = subdir+'/'+file
             print(f"\nPage under test: {target}")
@@ -92,22 +94,31 @@ async def testSuite(args):
                     for isBlind in [False, True]:
                         test_name_opt = test_name + (', with host' if withHost else '') + (', blind' if isBlind else '')
 
-                        tasks.append(loop.create_task(
-                            testStep(attack, target, vuln_param, test_name_opt, test_value, args, withHost, isBlind)
-                        ))
-            
+                        if multiprocessing and args.cuncurrency:
+                            process = multiprocessing.Process(target=testStep, 
+                                                            args=(attack, target, vuln_param, test_name_opt, test_value, args, results, withHost, isBlind))
+                            processes.append(process)
+                            process.start()
+                        else:
+                            testStep(attack, target, vuln_param, test_name_opt, test_value, args, results, withHost=withHost, isBlind=isBlind)
+
             # --- Argument Injection --- #
             vuln_param = 'input'
             attack = "Argument Injection"
             for test_name, test_value in arg_inj_payloads.items():
-                tasks.append(loop.create_task(
-                            testStep(attack, target, vuln_param, test_name, test_value, args)
-                ))
+                if multiprocessing and args.cuncurrency:
+                    process = multiprocessing.Process(target=testStep, 
+                                                    args=(attack, target, vuln_param, test_name_opt, test_value, args, results))
+                    processes.append(process)
+                    process.start()
+                else:
+                    testStep(attack, target, vuln_param, test_name, test_value, args, results)
 
-            # --- END CONCURRENCY (SYNC) --- #
-            results = await asyncio.gather(*tasks)
+            # --- END CUNCURRENCY (SYNC) --- #
+            for process in processes:
+                process.join()
 
-            if all(results): print(f"\u2705 All tests have passed")
+            if all(results.values()): print(f"\u2705 All tests have passed")
 
 
 def main() -> None:
@@ -117,17 +128,14 @@ def main() -> None:
     # 0 doesn't print anything, 1 prints only failure, 2 prints all
     parser.add_argument("--verbosity", type=int, default=1)
     # if I don't have permission to rm a file the program relies on random named files
-    parser.add_argument("--islocal", default=False, action=BooleanOptionalAction)
+    parser.add_argument("--islocal", default=True, action=BooleanOptionalAction)
     parser.add_argument("--port", type=int, default=9000)
     parser.add_argument("--oracle", type=str, default=subprocess.getoutput("whoami"))
-    parser.add_argument("--concurrency", default=True, action=BooleanOptionalAction)
+    parser.add_argument("--cuncurrency", default=True, action=BooleanOptionalAction)
     args: Namespace = parser.parse_args()
-    
-    if args.concurrency: args.oracle = 'www-data'
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(testSuite(args))
-    loop.close()
+    # subprocess.run(["cd",f"{args.basepath}", ";",  "php", "-S", f"localhost:{args.port}", "&"])
+    testSuite(args)
 
 if __name__ == "__main__":
     main()
