@@ -17,4 +17,4 @@ services:
       - ../Application:/myApp/www/html/Application/
     deploy:
       mode: replicated
-      replicas: 1
+      replicas: 2
