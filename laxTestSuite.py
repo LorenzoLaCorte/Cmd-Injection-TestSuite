@@ -27,7 +27,7 @@ arg_inj_payloads = {
 }
 
 async def testStep(attack, target, vuln_param, test_name, test_value, args, withHost=False, isBlind=False):
-    rand_num = random.randrange(MAX_RAND) 
+    rand_num = random.randrange(MAX_RAND) # use uuid4
     cookies = { }
     headers = { }
 
@@ -107,6 +107,9 @@ async def testSuite(args):
             if all(results): print(f"\u2705 All tests have passed")
 
 
+## TODO: Setup e cleanup per testcase e per testsuite ({Before, After}{All,Each})
+## TODO: Test di funzionalità per ogni pagina
+## TODO: Build per installare ping in php fpm
 def main() -> None:
     parser: ArgumentParser = ArgumentParser()
 
@@ -116,11 +119,12 @@ def main() -> None:
     # if I don't have permission to rm a file the program relies on random named files
     parser.add_argument("--islocal", default=True, action=BooleanOptionalAction)
     parser.add_argument("--port", type=int, default=9000)
-    parser.add_argument("--oracle", type=str, default=subprocess.getoutput("whoami"))
-    parser.add_argument("--concurrency", default=True, action=BooleanOptionalAction)
+    # set --no-nginx if using `php -S localhost:<port>`
+    parser.add_argument("--nginx", default=True, action=BooleanOptionalAction)
     args: Namespace = parser.parse_args()
     
-    if args.concurrency: args.oracle = 'www-data'
+    if args.nginx: args.oracle = "www-data"
+    else: args.oracle = subprocess.getoutput("whoami")
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(testSuite(args))
