@@ -9,9 +9,9 @@ services:
     ports:
       - '9050:80'
     depends_on:
-      - php-fpm
+      - pippo
 
-  php-fpm:
+  pippo:
     build: 
       context: .
       dockerfile: Dockerfile    
