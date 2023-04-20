@@ -58,3 +58,23 @@ Default behaviour is having permissions.
 # How to Use
 Run the php server (`docker-compose up`)
 Run the script (`python3 laxTestSuite.py`)
+
+
+## Concurrent Version
+Image used: https://github.com/richarvey/nginx-php-fpm
+
+To build the infrastructure:
+docker build -t rich_fpm_server .
+docker run rich_fpm_server
+
+To get the running container IP: 
+docker ps 
+docker inspect <container_running> | grep IPAddress
+
+IP address will usually be 172.17.0.2, so this is the default in my script, but in the case it is something else, you will have to update it.
+
+Then we can find our application on:
+http://<IP>/path_to_file
+
+For example:
+http://172.17.0.2/not-vuln/ping-escapeshellcmd.php?host=1.1.1.1

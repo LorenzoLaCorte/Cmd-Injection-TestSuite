@@ -29,23 +29,17 @@ arg_inj_payloads = {
 
 
 def BeforeAll(args):
-    if args.nginx: 
-        args.oracle = "www-data"
+    if args.concurrency: 
+        args.oracle = "nginx"
+        args.port = 80
     else: 
         args.oracle = subprocess.getoutput("whoami")
+        args.ip = "localhost"
+        cmd = ["php", "-S", f"localhost:{args.port}"]
+        cwd = os.getcwd() + ('/ApplicationFixed' if args.fixed_app else '/Application')
+        subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    # if args.nginx:
-    #     cmd = ["docker-compose", "up"]
-    #     cwd = os.getcwd() + ('/NginxServer')
-    #     subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
-    # else:
-    #     cmd = ["php", "-S", f"localhost:{args.port}"]
-    #     cwd = os.getcwd() + ('/Application' if args.fixed_app else '/ApplicationFixed')
-    #     # os.system(f"cd Application && php -S localhost:{args.port} &")
-    #     # subprocess.run(f"cd Application && php -S localhost:{args.port}", shell=True)
-    #     subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
-
-    # time.sleep(2)
+    time.sleep(1) # wait for the server to be running
 
 
 def CollectTargets(args):
@@ -91,7 +85,7 @@ async def functionalStep(target, args):
         vuln_param: test_value
     }
 
-    response = requests.get(f"http://localhost:{args.port}/{target}", params=params)
+    response = requests.get(f"http://{args.ip}:{args.port}/{target}", params=params)
 
     if response.status_code != 200:
         raise Exception(f"Error: {response.status_code}")
@@ -114,13 +108,13 @@ async def testStep(attack, target, vuln_param, test_name, test_value, args, with
         vuln_param: test_value
     }
 
-    response = requests.get(f"http://localhost:{args.port}/{target}", params=params, cookies=cookies, headers=headers)
+    response = requests.get(f"http://{args.ip}:{args.port}/{target}", params=params, cookies=cookies, headers=headers)
 
     if response.status_code != 200:
         raise Exception(f"Error: {response.status_code}")
 
     if isBlind:
-        response = requests.get(f"http://localhost:{args.port}/{rand_num}.tmp")
+        response = requests.get(f"http://{args.ip}:{args.port}/{rand_num}.tmp")
 
     test_result = not args.oracle in response.text
 
@@ -184,19 +178,17 @@ async def testSuite(args):
 def main() -> None:
     parser: ArgumentParser = ArgumentParser()
 
-    parser.add_argument("--fixed_app", default=False, action=BooleanOptionalAction)
-    # 0 doesn't print anything, 1 prints only failure, 2 prints all
-    parser.add_argument("--verbosity", type=int, default=1)
-    # if I don't have permission to rm a file the program relies on random named files
-    parser.add_argument("--port", type=int, default=9050)
-    # set --no-nginx if using `php -S localhost:<port>`
-    parser.add_argument("--nginx", default=False, action=BooleanOptionalAction)
+    parser.add_argument("--fixed_app", default=False, action=BooleanOptionalAction, help="Run ApplicationFixed/")
+    parser.add_argument("--verbosity", type=int, default=1, help="0 doesn't print anything - 1 prints only failure - 2 prints all")
+    parser.add_argument("--port", type=int, default=9000)
+    parser.add_argument("--concurrency", default=True, action=BooleanOptionalAction)
+    parser.add_argument("--ip", type=str, default="172.17.0.2", help="In case the concurrency is enabled, set the IP of your concurrent server")
+
     args: Namespace = parser.parse_args()
     
     BeforeAll(args)
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(testSuite(args))
+    loop = asyncio.run(testSuite(args))
     loop.close()
 
 
