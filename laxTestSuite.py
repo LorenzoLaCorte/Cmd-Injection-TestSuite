@@ -4,6 +4,7 @@
 # Author: Lorenzo La Corte
 
 from argparse import ArgumentParser, BooleanOptionalAction, Namespace
+import logging
 import subprocess
 import time
 import uuid
@@ -11,6 +12,17 @@ import httpx
 import os
 from pathlib import Path
 import asyncio
+
+
+logging.basicConfig(filename="requests.log",
+                    filemode='a',
+                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                    datefmt='%H:%M:%S',
+                    level=logging.DEBUG)
+
+logging.info("Running Urban Planning")
+
+logger = logging.getLogger('urbanGUI')
 
 MAX_RAND = 10**5
 client = httpx.Client(timeout=None)
@@ -87,6 +99,8 @@ async def functionalStep(target, args):
     }
 
     response = client.get(f"http://{args.ip}:{args.port}/{target}", params=params)
+
+    logging.info(f"http://{args.ip}:{args.port}/{target}?{vuln_param}={test_value}")
 
     if response.status_code != 200:
         raise Exception(f"Error: {response.status_code}")
