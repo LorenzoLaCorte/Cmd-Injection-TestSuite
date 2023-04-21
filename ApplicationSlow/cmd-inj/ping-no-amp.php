@@ -6,4 +6,4 @@ $host = $_GET['host'];
 // if (strpos($host, "&") > -1)
 if (str_contains($host, "&")) { die('NO HAX PLZ'); }
 
-system(escapeshellcmd("ping -c 3 $host"));
+system("ping -c 10 $host");

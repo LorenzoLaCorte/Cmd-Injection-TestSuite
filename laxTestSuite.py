@@ -7,12 +7,13 @@ from argparse import ArgumentParser, BooleanOptionalAction, Namespace
 import subprocess
 import time
 import uuid
-import requests
+import httpx
 import os
 from pathlib import Path
 import asyncio
 
 MAX_RAND = 10**5
+client = httpx.Client(timeout=None)
 
 cmd_inj_payloads = {
         'semicolon': ';whoami',
@@ -85,7 +86,7 @@ async def functionalStep(target, args):
         vuln_param: test_value
     }
 
-    response = requests.get(f"http://{args.ip}:{args.port}/{target}", params=params)
+    response = client.get(f"http://{args.ip}:{args.port}/{target}", params=params)
 
     if response.status_code != 200:
         raise Exception(f"Error: {response.status_code}")
@@ -97,6 +98,7 @@ async def functionalStep(target, args):
     return test_result
 
 async def testStep(attack, target, vuln_param, test_name, test_value, args, withHost=False, isBlind=False):
+    # print(attack + " - " + target + " - " + test_value + " - " + str(withHost) + " - " + str(isBlind))
     rand_num = uuid.uuid4()
     cookies = { }
     headers = { }
@@ -108,13 +110,13 @@ async def testStep(attack, target, vuln_param, test_name, test_value, args, with
         vuln_param: test_value
     }
 
-    response = requests.get(f"http://{args.ip}:{args.port}/{target}", params=params, cookies=cookies, headers=headers)
+    response = client.get(f"http://{args.ip}:{args.port}/{target}", params=params, cookies=cookies, headers=headers)
 
     if response.status_code != 200:
         raise Exception(f"Error: {response.status_code}")
 
     if isBlind:
-        response = requests.get(f"http://{args.ip}:{args.port}/{rand_num}.tmp")
+        response = client.get(f"http://{args.ip}:{args.port}/{rand_num}.tmp")
 
     test_result = not args.oracle in response.text
 
@@ -134,6 +136,7 @@ async def testSuite(args):
 
     for subdir, files in targets.items(): 
         for file in files:
+            
             # --- START CONCURRENCY --- #
             tasks = []
             loop = asyncio.get_event_loop()
@@ -189,8 +192,6 @@ def main() -> None:
     BeforeAll(args)
 
     loop = asyncio.run(testSuite(args))
-    loop.close()
-
 
 if __name__ == "__main__":
     main()

@@ -105,3 +105,7 @@ Page under test: not-vuln/echo-name.php
 Page under test: not-vuln/ping-escapeshellcmd.php
 ✅ Functional Verifification
 ✅ All tests have passed
+
+real    3m19.126s
+user    0m1.057s
+sys     0m0.059s
