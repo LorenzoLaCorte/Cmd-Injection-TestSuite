@@ -2,4 +2,4 @@
 
 $input = $_GET['input'];
 
-system(escapeshellarg("find . -name $input"));
+system("find . -name ".escapeshellarg($input));

@@ -1,80 +1,48 @@
-# Instructions
+# Command and Argument Injection Concurrent Test Suite  
 
-For this assignment, you will start building a minimal test suite for our environment. 
-This assignment will then become a module of a larger testing suite, that we will build and organize in the next assignments.
+```
+usage: laxTestSuite.py [-h] [--fixed_app | --no-fixed_app] [--verbosity VERBOSITY] [--ports PORTS] [--nginx | --no-nginx]
 
-The ideal test suite should be implemented in Python, and be accessible via a command line.
-Remember that, to perform HTTP calls in Python, you can use the requests module.
-Also, you can use curl converter to convert cURL commands into Python (or any other language). 
-This is particularly useful if you use the "Copy as cURL" functionality from your browser.
+options:
+  -h, --help            show this help message and exit
+  --fixed_app, --no-fixed_app
+                        Run the TestSuite on the fixed application (default: True)
+  --verbosity VERBOSITY
+                        Verbosity Level - 0: Doesn't print anything, 1: Prints only failure, 2: Prints all
+  --ports PORTS         Set the ports of your servers
+  --nginx, --no-nginx   Test the application on the nginx container (default: False)
+```
 
+## Multiple Standard PHP Servers
+If executed without the nginx option, the script tests the application concurrently on standard PHP servers.
+These are opened on the specified ports, by default [9000, 9001, 9002, 9003].
 
-## What to do
-You should create a Python script that calls the target application attached to this assignment, and shows a summary of the results. 
+NOTE: 
+If you want to test the script on the fixed application and you have just tested it on the standard application, please change ports.
+Resources should be released and so servers should be stopped but it seems like sometimes they are not.
 
-For each page of the tested application, you should design and implement a test step (which we will integrate in a larger test suite in the upcoming assignments) that checks:
-- if the page is working correctly (e.g., for ping pages, that it pings the correct host) **TODO**
-- if the page is vulnerable to command injection.
+### Example of Usage
+```python3 laxTestSuite.py```
 
-The test case should at least take the following attacks (and its variants) into consideration:
-
-- Command Injection (via ";", other command separators, and subshells)
-- Argument Injection
-- Blind Command Injection [BONUS - not mandatory]
-
-You can inject any command you want. My suggestion is to go with "whoami", which has an easier (and more recognizable) output.
-
-You will notice that some pages (e.g., ping*.php ones) are slow to test. If you want, you can try to make the test more efficient, for example by adding concurrency (e.g., via the asyncio module) *[BONUS - not mandatory]* **TODO**
-
-If you want to go above and beyond, fix the vulnerabilities in the attached application, and also hand in your fixed code. *[BONUS 2 - also not mandatory]* **TODO**
-
-
-## What to deliver
-
-- The code of your test steps
-- Instructions (or a run.sh script) to launch your test suite. *[If you have a complex CLI program (which you really shouldn't have)]*
-- A text file with any interesting additional information regarding your tests *[Optional]*
-- The updated code for the attached application *[If you implemented BONUS 2]*
-
-
-Starting from scratch might be harder for some of you, and that's perfectly fine. 
-I attached the sample test step that I showed during the lesson to help you with a starting point.
-
-WARNING: the sample test is neither exhaustive, nor entirely correct. 
-It will require improvements to be a good test suite (for example, covering all pages and taking additional corner cases into consideration, or cleaning the output).
-
-## Particular Stuff
-
-### Verbosity Level
-0 doesn't print anything, 1 prints only failure (default), 2 prints all
-**TODO** set as parameter
-
-### RM Permission Flag
-if I don't have permission to rm a file the program relies on random named files
-Default behaviour is having permissions.
-**TODO** set as parameter
-
-
-# How to Use
-Run the php server (`docker-compose up`)
-Run the script (`python3 laxTestSuite.py`)
-
-
-## Concurrent Version
+## Nginx + PHP FPM Server
 Image used: https://github.com/richarvey/nginx-php-fpm
 
-To build the infrastructure:
-docker build -t rich_fpm_server .
-docker run rich_fpm_server
+If executed with the nginx option, the script tests the application concurrently on a container.
 
-To get the running container IP: 
-docker ps 
-docker inspect <container_running> | grep IPAddress
+**You have to build and run the container before starting**:
 
-IP address will usually be 172.17.0.2, so this is the default in my script, but in the case it is something else, you will have to update it.
+```docker build -t rich_fpm_server . && docker run rich_fpm_server```
 
-Then we can find our application on:
-http://<IP>/path_to_file
+### Example of Usage
+```python3 laxTestSuite.py --nginx```
 
-For example:
-http://172.17.0.2/not-vuln/ping-escapeshellcmd.php?host=1.1.1.1
+# Execution Time 
+Increasing the number of servers can be very useful to have a faster execution, but having too many servers is useless and can be also less efficient:
+
+![ConcurrentExecutionTime](./Results/times.png)  
+
+# Possible Refinements
+This script is made for educational purposes and may be incomplete or improvable.
+A possible refinement for sure is a better visualization of results, involving:
+- results collected in a structured way in a dictionary,
+- results better visualized through a tabular view.

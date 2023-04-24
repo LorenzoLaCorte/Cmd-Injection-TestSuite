@@ -4,17 +4,16 @@
 # Author: Lorenzo La Corte
 
 from argparse import ArgumentParser, BooleanOptionalAction, Namespace
+from urllib.parse import urlencode, quote_plus
 import logging
 import random
 import subprocess
 import time
 import uuid
-import requests
 import os
 from pathlib import Path
 import asyncio
 import aiohttp
-from urllib.parse import urlencode, quote_plus
 
 
 logging.basicConfig(filename="requests.log",
@@ -22,8 +21,6 @@ logging.basicConfig(filename="requests.log",
                     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
                     datefmt='%H:%M:%S',
                     level=logging.DEBUG)
-
-MAX_RAND = 10**5
 
 cmd_inj_payloads = {
         'semicolon': ';whoami',
@@ -40,29 +37,28 @@ arg_inj_payloads = {
 
 
 def BeforeAll(args):
-    args.oracle = subprocess.getoutput("whoami")
-    args.ip = "localhost"
+    if args.fixed_app: args.basepath = "ApplicationFixed"
+    else: args.basepath = "Application"
 
-    if args.concurrency:
+    if args.nginx:
+        args.oracle = "nginx"
+        args.ip = "172.17.0.2"
+        args.port = 80
+    else:
+        args.oracle = subprocess.getoutput("whoami")
+        args.ip = "localhost"
+
+        args.processes = []
+
         for port in args.ports:
             cmd = ["php", "-S", f"localhost:{port}"]
-            cwd = os.getcwd() + ('/ApplicationFixed' if args.fixed_app else '/Application')
-            subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    else:
-        cmd = ["php", "-S", f"localhost:{args.port}"]
-        cwd = os.getcwd() + ('/ApplicationFixed' if args.fixed_app else '/Application')
-        subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    time.sleep(1) # wait for the server to be running
+            cwd = os.getcwd() + (f"/{args.basepath}")
+            args.processes.append(subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE))
+            
+        time.sleep(1) # wait for the server to be running
 
 
 def CollectTargets(args):
-    if args.fixed_app:
-        args.basepath = "ApplicationFixed"
-    else:
-        args.basepath = "Application"
-
     targets: dict[str, list[str]] = {}
     basepath = Path(args.basepath)
     subdirs = basepath.iterdir()
@@ -75,18 +71,26 @@ def CollectTargets(args):
     return targets
 
 
-def AfterEach(rand_num):
-    try: os.remove(f"Application/{rand_num}.tmp")
+def AfterEach(args, rand_num):
+    try: os.remove(f"{args.basepath}/{rand_num}.tmp")
     except: pass
 
+def AfterAll(args):
+    try: os.remove(f"{args.basepath}/*.tmp")
+    except: pass
+
+    if args.nginx:
+        for process in args.processes:
+            try: process.terminate()
+            except: pass
+
 async def functionalStep(target, args):
-    if 'echo-' in target:
+    if 'echo' in target or 'no-output' in target:
+        print("\u2705 Functional Verifification", flush=True)
+        return True
+    elif 'echo-' in target:
         vuln_param = 'name'
         test_value = oracle = 'my_message'
-    elif 'echo' or 'no-output' in target:
-        test_result = True
-        print("{} {}".format("\u2705" if test_result else "\u274c", "Functional Verifification"), flush=True)
-        return test_result
     elif 'ping' in target:
         vuln_param = 'host'
         test_value = oracle = 'localhost'
@@ -96,27 +100,30 @@ async def functionalStep(target, args):
     else:
         raise Exception(f"Error: page not recognized")
 
-    params = {
-        vuln_param: test_value
-    }
+    if not args.nginx: args.port = random.choice(args.ports)
 
-    response = requests.get(f"http://{args.ip}:{args.port}/{target}", params=params)
-    logging.info(f"http://{args.ip}:{args.port}/{target}?{vuln_param}={test_value}")
+    params = urlencode({ vuln_param: test_value }, quote_via=quote_plus)
 
-    if response.status_code != 200:
-        raise Exception(f"Error: {response.status_code}")
+    async with aiohttp.ClientSession() as client:
+        injectionRequest = f"http://{args.ip}:{args.port}/{target}?{params}"
+        logging.info(injectionRequest)
+        
+        async with client.get(injectionRequest) as response:
 
-    test_result = oracle in response.text
+            if response.status != 200:
+                raise Exception(f"Error: {response.status_code}")
+            
+            response_text = await response.text()
 
-    print("{} {}".format("\u2705" if test_result else "\u274c", "Functional Verifification"), flush=True)
+            test_result = oracle in response_text
 
-    return test_result
+            print("{} {}".format("\u2705" if test_result else "\u274c", "Functional Verifification"), flush=True)
+
+            return test_result
 
 async def testStep(attack, target, vuln_param, test_name, test_value, args, withHost=False, isBlind=False):
     rand_num = uuid.uuid4()
-
-    if args.concurrency:
-        args.port = random.choice(args.ports)
+    if not args.nginx: args.port = random.choice(args.ports)
 
     test_value = 'localhost' + test_value if withHost else test_value
     test_value = test_value + f'>../{rand_num}.tmp' if isBlind else test_value
@@ -149,7 +156,7 @@ async def testStep(attack, target, vuln_param, test_name, test_value, args, with
             if args.verbosity == 1 and not test_result: print(f"\u274c {attack}: {test_name}", flush=True)
             elif args.verbosity == 2: print("{} {}: {}".format("\u2705" if test_result else "\u274c", attack, test_name), flush=True)
 
-            AfterEach(rand_num)
+            AfterEach(args, rand_num)
 
             return test_result
 
@@ -197,22 +204,18 @@ async def testSuite(args):
 
             # --- END CONCURRENCY (SYNC) --- #
             results = await asyncio.gather(*tasks)
-
+            
             if all(results): print(f"\u2705 All tests have passed", flush=True)
+    
+    AfterAll(args)
 
-# TODO: Cuncurrent Functional Verification
-# TODO: Try it on nginx
-# TODO: Clean args
-# TODO: Clean everything
 def main() -> None:
     parser: ArgumentParser = ArgumentParser()
 
     parser.add_argument("--fixed_app", default=False, action=BooleanOptionalAction, help="Run the TestSuite on the fixed application")
-    parser.add_argument("--verbosity", type=int, default=1, help="0 doesn't print anything - 1 prints only failure - 2 prints all")
-    parser.add_argument("--port", type=int, default=9000)
-    parser.add_argument("--concurrency", default=True, action=BooleanOptionalAction)
-    parser.add_argument("--ip", type=str, default="172.17.0.2", help="In case the concurrency is enabled, set the IP of your concurrent server")
-    parser.add_argument("--ports", type=list[str], default=[i for i in range(8050,8177)], help="In case the concurrency is enabled, set the ports of your servers")
+    parser.add_argument("--verbosity", type=int, default=1, help="Verbosity Level - 0: Doesn't print anything, 1: Prints only failure, 2: Prints all")
+    parser.add_argument("--ports", type=list[str], default=[i for i in range(9000,9003)], help="Set the ports of your servers")
+    parser.add_argument("--nginx", default=False, action=BooleanOptionalAction, help="Test the application on the nginx container")
 
     args: Namespace = parser.parse_args()
     
