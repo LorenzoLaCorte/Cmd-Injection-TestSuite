@@ -17,7 +17,7 @@ import aiohttp
 
 
 logging.basicConfig(filename="requests.log",
-                    filemode='a',
+                    filemode='w',
                     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
                     datefmt='%H:%M:%S',
                     level=logging.DEBUG)
@@ -72,14 +72,11 @@ def CollectTargets(args):
 
 
 def AfterEach(args, rand_num):
-    try: os.remove(f"{args.basepath}/{rand_num}.tmp")
+    try: os.remove(f"./{args.basepath}/{rand_num}.tmp")
     except: pass
 
 def AfterAll(args):
-    try: os.remove(f"{args.basepath}/*.tmp")
-    except: pass
-
-    if args.nginx:
+    if not args.nginx:
         for process in args.processes:
             try: process.terminate()
             except: pass
@@ -214,7 +211,7 @@ def main() -> None:
 
     parser.add_argument("--fixed_app", default=False, action=BooleanOptionalAction, help="Run the TestSuite on the fixed application")
     parser.add_argument("--verbosity", type=int, default=1, help="Verbosity Level - 0: Doesn't print anything, 1: Prints only failure, 2: Prints all")
-    parser.add_argument("--ports", type=list[str], default=[i for i in range(9000,9003)], help="Set the ports of your servers")
+    parser.add_argument("--ports", type=list[str], default=[i for i in range(5000,5003)], help="Set the ports of your servers")
     parser.add_argument("--nginx", default=False, action=BooleanOptionalAction, help="Test the application on the nginx container")
 
     args: Namespace = parser.parse_args()
