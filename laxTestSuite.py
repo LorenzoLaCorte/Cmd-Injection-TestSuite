@@ -37,7 +37,10 @@ arg_inj_payloads = {
 
 
 def BeforeAll(args):
-    if args.fixed_app: args.basepath = "ApplicationFixed"
+    if args.fixed_app: 
+        if args.nginx: 
+            raise Exception(f"Error: not implemented functionality, test without nginx.")
+        args.basepath = "ApplicationFixed"
     else: args.basepath = "Application"
 
     if args.nginx:
@@ -211,7 +214,7 @@ def main() -> None:
 
     parser.add_argument("--fixed_app", default=False, action=BooleanOptionalAction, help="Run the TestSuite on the fixed application")
     parser.add_argument("--verbosity", type=int, default=1, help="Verbosity Level - 0: Doesn't print anything, 1: Prints only failure, 2: Prints all")
-    parser.add_argument("--ports", type=list[str], default=[i for i in range(5000,5003)], help="Set the ports of your servers")
+    parser.add_argument("--ports", type=list[int], default=[i for i in range(10000,10003)], help="Set the ports of your servers")
     parser.add_argument("--nginx", default=False, action=BooleanOptionalAction, help="Test the application on the nginx container")
 
     args: Namespace = parser.parse_args()

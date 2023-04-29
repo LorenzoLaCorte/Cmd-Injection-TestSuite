@@ -15,11 +15,7 @@ options:
 
 ## Multiple Standard PHP Servers
 If executed without the nginx option, the script tests the application concurrently on standard PHP servers.
-These are opened on the specified ports, by default [9000, 9001, 9002, 9003].
-
-NOTE: 
-If you want to test the script on the fixed application and you have just tested it on the standard application, please change ports.
-Resources should be released and so servers should be stopped but it seems like sometimes they are not.
+These are opened on the specified ports, by default [10000, 10001, 10002, 10003].
 
 ### Example of Usage
 ```python3 laxTestSuite.py```
@@ -46,3 +42,4 @@ This script is made for educational purposes and may be incomplete or improvable
 A possible refinement for sure is a better visualization of results, involving:
 - results collected in a structured way in a dictionary,
 - results better visualized through a tabular view.
+Another thing to do is to release resources also if the user stops the execution manually.
